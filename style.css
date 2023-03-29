@@ -1,0 +1,11 @@
+:root {
+    --primary: #00acc1;
+    --font-size: 15px;
+    --spacing: .75rem
+  }
+  .headings {
+    margin-bottom : 0;
+  }
+  .hidden {
+    visibility: hidden;
+  }

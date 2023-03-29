@@ -1,0 +1,38 @@
+<html data-theme="light">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvasjs/1.7.0/canvasjs.min.js"></script>
+    <script src="main.js" defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@1.*/css/pico.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<header class="container headings">
+  <hgroup>
+    <h1>Explorateur des prélèvements d'eau potable par commune</h1>
+    <p>Graphiques des résultats de prélèvements règlementaires des réseaux d'eau potable en France.
+      <br/>Jeux de données & APIs : 
+      <a href="https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/">data.gouv.fr</a>,
+      <a href="https://hubeau.eaufrance.fr/">EauFrance Hub'eau</a>, 
+      <a href="https://apicarto.ign.fr/">IGN API Carto</a>
+    </p>
+  </hgroup>
+  <progress value="0" max="100"></progress>
+</header>
+<aside class="container">
+  <form>
+    <label>Code postal</label>
+    <input id="code_postal" type="text" pattern="\d{5}" required/>
+    <div class="grid">
+      <label>Commune
+        <select id="communes" disabled></select>
+      </label>
+      <label>Réseau d'eau
+        <select id="reseaux" disabled></select>
+      </label>
+    </div>
+    <label>Analyse</label>
+    <select id="paramSelect" disabled></select>
+  </form>
+</aside>
+<article class="container">
+  <div id="chart" class="hidden" style="height: 300px; width: 100%;"></div>
+</article>
