@@ -1,11 +1,24 @@
 :root {
-    --primary: #00acc1;
-    --font-size: 15px;
-    --spacing: .75rem
-  }
-  .headings {
-    margin-bottom : 0;
-  }
-  .hidden {
-    visibility: hidden;
-  }
+  --primary: #00acc1;
+  --font-size: 15px;
+  --spacing: .75rem
+}
+
+.headings {
+  margin-bottom: 0;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+footer{
+  text-align: center;
+}
+.credits,
+a.github {
+  display: flex;
+  gap: .25em;
+  align-items: center;
+  justify-content: center;
+}
