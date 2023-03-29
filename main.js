@@ -6,7 +6,8 @@ const communes = document.querySelector("#communes");
 const reseaux = document.querySelector("#reseaux");
 const params = document.querySelector("#paramSelect");
 const progress = document.querySelector("progress");
-const chartContainer = document.querySelector("#chart");
+
+const chartContainer = document.getElementById('chart');
 
 codePostal.addEventListener("input", onInputCP);
 communes.addEventListener("change", updateReseaux);
@@ -16,29 +17,100 @@ params.addEventListener("change", updateChart);
 const codeCommune = () => communes.options[communes.selectedIndex].value;
 const codeReseau = () => reseaux.options[reseaux.selectedIndex].value;
 const parameter = () => params.options[params.selectedIndex].text;
+const commune = () => communes.options[communes.selectedIndex].text;
+const reseau = () => reseaux.options[reseaux.selectedIndex].text;
 
 var data = [];
 var infos = {};
-var chart = new CanvasJS.Chart("chart", {
-    animationEnabled: false,
-    theme: "dark",
-    title: {
-        fontSize: 16,
+
+Chart.defaults.font.size = 14;
+Chart.defaults.font.lineHeight = 1;
+Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI","Roboto","Ubuntu","Cantarell","Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"';
+var chart = new Chart(chartContainer, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: '',
+            data: [],
+            borderColor: '#5abcd8',
+            borderWidth: 2,
+            cubicInterpolationMode: 'monotone',
+            tension: 0.2,
+            pointBorderColor: context => {
+                var value = context.dataset.data[context.dataIndex];
+                return value < infos.min || value > infos.max ? 'red' : '#5abcd8';
+            }
+        }]
     },
-    subtitles: [{
-        text: "",
-    }],
-    axisY: {
-        titleFontSize: 12,
-        includeZero: true
-    },
-    data: [{
-        type: "line",
-        color: "#5abcd8",
-        markerSize: 8,
-        yValueFormatString: "#.### mg(Cl2)/L"
-    }]
+    options: {
+        animation: false,
+        locale: 'fr-FR',
+        scales: {
+            x: {
+                type: 'time',
+                time: {
+                    tooltipFormat:"'le' dd/MM/yyyy 'à' HH:mm",
+                }
+            },
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: ctx => infos.unit,
+                }
+            }
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: () => {
+                    if(!data.length) return;
+                    return `Mesures ${parameter()}, ${commune()}`;
+                },
+            },
+            subtitle: {
+                display: true,
+                text: () => {
+                    if(!data.length) return;
+                    return [
+                        `Réseau ${reseau()}`,
+                        infos.minmax ? `Norme : ${infos.minmax}` : ''
+                    ];
+                },
+                padding: {
+                    top: 0,
+                    bottom: 20
+                },
+            },
+            legend:{
+                display: false
+            },
+            tooltip: {
+                padding: 14,
+                callbacks: {
+                    label: (ctx) => `${ctx.formattedValue} ${infos.unit}`,
+                },
+            },
+            annotation: {
+                annotations: {
+                    reference: {
+                        drawTime: 'beforeDatasetsDraw',
+                        display: true,
+                        type: 'box',
+                        yMin: () => infos.min || 0,
+                        yMax: () => infos.max,
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                        borderWidth: 0,
+                    }
+                }
+            }
+        }
+    }
 });
+
+
+onInputCP();
 
 function onInputCP() {
     if (codePostal.value) progress.removeAttribute("value");
@@ -135,33 +207,27 @@ function updateParams() {
 function updateChart() {
     if (!params.value) return;
     let dataPoints = paramData(data, parameter());
-    chart.options.title.text = parameter();
-    chart.options.subtitles[0].text = infos.minmax || "";
-    chart.options.axisY.title = infos.unit;
-    chart.options.axisY.maximum = null;
-    chart.options.axisY.stripLines = [];
-    if (infos.minmax) {
-        chart.options.axisY.maximum = Math.max(...dataPoints.map(d => d.y), infos.max, 0.5) * 1.5;
-        chart.options.axisY.stripLines = [{
-            startValue: infos.min || 0,
-            endValue: infos.max,
-            color: "#d8d8d8"
-        }];
-    }
-    chart.options.data[0].dataPoints = dataPoints;
-    chart.render();
+    chart.data.labels = dataPoints.map(dp => dp.x);
+    chart.data.datasets[0].data = dataPoints.map(dp => dp.y);
+
+    chart.scales.y.title = infos.unit;
+    chart.scales.y.max = null;
+    chart.scales.y.stripLines = [];
+
+    chart.update();
 }
 function paramData(data, param) {
     let filtered = data.filter(x => x.libelle_parametre == param);
     infos = {};
+    infos.datamax = Math.max(...filtered.map(i => i.resultat_numerique));
     infos.unit = filtered[0].libelle_unite;
     infos.minmax = filtered[0].reference_qualite_parametre;
     if (infos.min == null && infos.minmax != null) {
         let minmax = infos.minmax.match(/(>=?([0-9,]+).*)?<=?([0-9,]+)/)
         if (minmax) {
-            minmax = minmax.map(s => parseFloat(s))
-            infos.min = minmax[2] || 0
-            infos.max = minmax[3]
+            minmax = minmax.map(s => parseFloat(s));
+            infos.min = minmax[2] || 0;
+            infos.max = minmax[3];
         }
     }
     let dp = [];
