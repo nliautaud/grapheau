@@ -26,3 +26,9 @@ Les données formalisées sont récupérées via l'[API *Qualité de l'eau potab
 ```
 
 Si les données pour le paramètre choisi indiquent des valeurs minimales et/ou maximales de référence, la plage correspondante est indiquée dans le graphique et les points de données hors référence sont marqués en rouge.
+
+-----
+
+|[Rapport Lighthouse](https://htmlpreview.github.io/?https://raw.githubusercontent.com/nliautaud/grapheau/main/lighthouse_results/desktop/nliautaud_github_io_grapheau_.html)|
+|--|
+|<img src="https://github.com/nliautaud/grapheau/raw/main/lighthouse_results/desktop/pagespeed.svg" alt="lighthouse ratings"  align="center" width="600px" style="max-width: 100%;">|
