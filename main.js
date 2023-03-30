@@ -11,11 +11,6 @@ const unknowncp = document.querySelector(".unknowncp");
 
 const chartContainer = document.getElementById('chart');
 
-codePostal.addEventListener("input", onInputCP);
-communes.addEventListener("change", updateReseaux);
-reseaux.addEventListener("change", updateData);
-params.addEventListener("change", updateChart);
-
 const codeCommune = () => communes.options[communes.selectedIndex].value;
 const codeReseau = () => reseaux.options[reseaux.selectedIndex].value;
 const parameter = () => params.options[params.selectedIndex].text;
@@ -24,6 +19,14 @@ const reseau = () => reseaux.options[reseaux.selectedIndex].text;
 
 var data = [];
 var infos = {};
+
+codePostal.addEventListener("input", onInputCP);
+communes.addEventListener("change", updateReseaux);
+reseaux.addEventListener("change", updateData);
+params.addEventListener("change", () => {
+    infos.lastParam = params.value;
+    updateChart();
+});
 
 Chart.defaults.font.size = 14;
 Chart.defaults.font.lineHeight = 1;
@@ -163,18 +166,12 @@ function onInputCP() {
     if (isInvalid) {
         communes.innerHTML = "";
         reseaux.innerHTML = "";
-        params.innerHTML = "";
         chartContainer.classList.add("hidden");
         return;
     }
 
-    // main flow
     fetchCommunes()
     .then(updateCommunes)
-    .then(updateReseaux)
-    .then(updateData)
-    .then(updateParams)
-    .then(updateChart);
 }
 function fetchCommunes() {
     return fetch(`${APICARTO}/codes-postaux/communes/${codePostal.value}`)
@@ -204,10 +201,11 @@ function updateCommunes(json) {
         opt.value = o.codeCommune;
         communes.add(opt);
     });
+    updateReseaux();
 }
 function updateReseaux() {
     reseaux.innerHTML = "";
-    return fetch(`${HUBEAUAPI}/communes_udi?code_commune=${codeCommune()}`)
+    fetch(`${HUBEAUAPI}/communes_udi?code_commune=${codeCommune()}`)
         .then(res => {
             if(!res.ok) {
                 progressManager.error();
@@ -229,12 +227,13 @@ function updateReseaux() {
                 codes.push(entry.code_reseau)
             }
         })
+        .then(updateData)
         .catch(error => {
             throw (error);
         });
 }
 function updateData() {
-    return fetch(`${HUBEAUAPI}/resultats_dis?code_commune=${codeCommune()}&code_reseau=${codeReseau()}`)
+    fetch(`${HUBEAUAPI}/resultats_dis?code_commune=${codeCommune()}&code_reseau=${codeReseau()}`)
         .then(res => {
             if(!res.ok) {
                 progressManager.error();
@@ -249,12 +248,12 @@ function updateData() {
             // console.log("data");
             // console.log(data);
         })
+        .then(updateParams)
         .catch(error => {
             throw (error);
         });
 }
 function updateParams() {
-    let currentvalue = params.value ? params.options[params.selectedIndex].value : 1302;
     params.innerHTML = "";
     let used = [];
     let sorted = data.sort((a, b) => a.libelle_parametre.toLowerCase().localeCompare(b.libelle_parametre.toLowerCase()))
@@ -268,7 +267,10 @@ function updateParams() {
         params.add(opt);
         used.push(entry.libelle_parametre);
     }
-    params.value = currentvalue;
+    if(infos.lastParam && params.querySelector(`option[value="${infos.lastParam}"]`))
+        params.value = infos.lastParam;
+    else params.value = 1302;
+    updateChart();
 }
 function updateChart() {
     if (!params.value) return;
@@ -285,11 +287,11 @@ function updateChart() {
 }
 function paramData(data, param) {
     let filtered = data.filter(x => x.libelle_parametre == param);
-    infos = {};
     infos.datamax = Math.max(...filtered.map(i => i.resultat_numerique));
     infos.unit = filtered[0].libelle_unite;
     infos.minmax = filtered[0].reference_qualite_parametre;
-    if (infos.min == null && infos.minmax != null) {
+    infos.min = infos.max = null;
+    if (infos.minmax != null) {
         let minmax = infos.minmax.match(/(>=?([0-9,]+).*)?<=?([0-9,]+)/)
         if (minmax) {
             minmax = minmax.map(s => parseFloat(s));
