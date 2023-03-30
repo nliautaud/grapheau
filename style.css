@@ -1,11 +1,18 @@
-:root {
-  --primary: #00acc1;
+:root:not([data-theme="dark"]), [data-theme="light"]  {
+  --primary: hsl(196deg, 100%, 25%);
+  --color: hsl(205deg, 30%, 25%);
+  --h1-color: hsl(191deg, 70%, 15%);
+  --muted-color: hsl(205deg, 10%, 40%);
   --font-size: 15px;
-  --spacing: .75rem
+  --spacing: .75rem;
 }
 
-.headings {
-  margin-bottom: 0;
+body > header {
+  padding-bottom: 1rem;
+}
+h1 {
+  line-height: 1;
+  margin-bottom: 1rem;
 }
 
 .hidden {
