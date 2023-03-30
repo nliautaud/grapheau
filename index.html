@@ -20,7 +20,9 @@
 <aside class="container">
   <form>
     <label>Code postal
-      <input id="code_postal" type="text" pattern="\d{5}" required/>
+      <span class="inputmsg alert invalidcp" hidden>Le code postal doit être composé de cinq chiffres. Ex : 27183</span>
+      <span class="inputmsg alert unknowncp" hidden>Ce code postal est inconnu</span>
+      <input id="code_postal" type="text" pattern="(\d\s*){5}" required/>
     </label>
     <div class="grid">
       <label>Commune

@@ -6,6 +6,8 @@ const communes = document.querySelector("#communes");
 const reseaux = document.querySelector("#reseaux");
 const params = document.querySelector("#paramSelect");
 const progress = document.querySelector("progress");
+const invalidcp = document.querySelector(".invalidcp");
+const unknowncp = document.querySelector(".unknowncp");
 
 const chartContainer = document.getElementById('chart');
 
@@ -54,7 +56,7 @@ var chart = new Chart(chartContainer, {
                 }
             },
             y: {
-                beginAtZero: true,
+                beginAtreset: true,
                 title: {
                     display: true,
                     text: ctx => infos.unit,
@@ -109,53 +111,114 @@ var chart = new Chart(chartContainer, {
     }
 });
 
-
-onInputCP();
+var progressManager = {
+    error: () => {
+        progress.setAttribute("value", 100)
+        progress.classList.add("error")
+        progress.classList.remove("valid")
+    },
+    valid: (value) => {
+        progress.setAttribute("value", value)
+        progress.classList.add("valid")
+        progress.classList.remove("error")
+    },
+    loading: (value) => {
+        progress.removeAttribute("value")
+        progress.classList.remove("valid")
+        progress.classList.remove("error")
+    },
+    reset: (value) => {
+        progress.setAttribute("value", 0)
+        progress.classList.remove("valid")
+        progress.classList.remove("error")
+    }
+}
 
 function onInputCP() {
-    if (codePostal.value) progress.removeAttribute("value");
-    else progress.setAttribute("value", 0);
-    let invalidCP = !codePostal.checkValidity();
-    communes.disabled = invalidCP;
-    reseaux.disabled = invalidCP;
-    params.disabled = invalidCP;
-    if (codePostal.value) codePostal.setAttribute("aria-invalid", invalidCP);
-    else codePostal.removeAttribute("aria-invalid");
-    if (invalidCP) {
+    unknowncp.hidden = true;
+    invalidcp.hidden = true;
+    progressManager.reset();
+
+    let trimmedCP = codePostal.value.replaceAll(' ','');
+    if (trimmedCP.length) progressManager.loading();
+
+    let isInvalid = !codePostal.checkValidity();
+    if (trimmedCP.match(/^\d{0,4}$/)) {
+        codePostal.removeAttribute("aria-invalid");
+    }
+    else {
+        codePostal.setAttribute("aria-invalid", isInvalid);
+        invalidcp.hidden = !isInvalid;
+        if(isInvalid) {
+            progressManager.error();
+        }
+    }
+    
+    codePostal.value = trimmedCP;
+    communes.disabled = true;
+    reseaux.disabled = true;
+    params.disabled = true;
+    communes.innerHTML = "";
+
+    if (isInvalid) {
         communes.innerHTML = "";
         reseaux.innerHTML = "";
         params.innerHTML = "";
         chartContainer.classList.add("hidden");
         return;
     }
-    updateCommunes();
+
+    // main flow
+    fetchCommunes()
+    .then(updateCommunes)
+    .then(updateReseaux)
+    .then(updateData)
+    .then(updateParams)
+    .then(updateChart);
 }
-function updateCommunes() {
-    communes.innerHTML = "";
-    fetch(`${APICARTO}/codes-postaux/communes/${codePostal.value}`)
-        .then(res => res.json())
-        .then(json => {
-            console.log("communes")
-            console.log(json)
-            json.forEach(o => {
-                let opt = document.createElement("option");
-                opt.text = o.nomCommune;
-                opt.value = o.codeCommune;
-                communes.add(opt);
-            });
+function fetchCommunes() {
+    return fetch(`${APICARTO}/codes-postaux/communes/${codePostal.value}`)
+        .then(res => {
+            codePostal.setAttribute("aria-invalid", !res.ok)
+            unknowncp.hidden = res.ok;
+            if(!res.ok) {
+                progressManager.error();
+                throw new Error(`${APICARTO} returned ${res.status}`);
+            }
+            return res;
         })
-        .then(updateReseaux)
+        .then(res => res.json())
         .catch(error => {
             throw (error);
         });
 }
+function updateCommunes(json) {
+    communes.disabled = false;
+    reseaux.disabled = false;
+    params.disabled = false;
+    // console.log("communes")
+    // console.log(json)
+    json.forEach(o => {
+        let opt = document.createElement("option");
+        opt.text = o.nomCommune;
+        opt.value = o.codeCommune;
+        communes.add(opt);
+    });
+}
 function updateReseaux() {
     reseaux.innerHTML = "";
-    fetch(`${HUBEAUAPI}/communes_udi?code_commune=${codeCommune()}`)
+    return fetch(`${HUBEAUAPI}/communes_udi?code_commune=${codeCommune()}`)
+        .then(res => {
+            if(!res.ok) {
+                progressManager.error();
+                throw new Error(`${HUBEAUAPI} returned ${res.status}`);
+            }
+            return res;
+        })
         .then(res => res.json())
         .then(json => {
-            console.log("reseaux")
-            console.log(json.data)
+            // console.log("reseaux")
+            // console.log(json.data)
             let codes = [];
             for (let entry of json.data) {
                 if (codes.includes(entry.code_reseau)) continue;
@@ -166,23 +229,26 @@ function updateReseaux() {
                 codes.push(entry.code_reseau)
             }
         })
-        .then(updateData)
         .catch(error => {
             throw (error);
         });
 }
 function updateData() {
-    fetch(`${HUBEAUAPI}/resultats_dis?code_commune=${codeCommune()}&code_reseau=${codeReseau()}`)
+    return fetch(`${HUBEAUAPI}/resultats_dis?code_commune=${codeCommune()}&code_reseau=${codeReseau()}`)
+        .then(res => {
+            if(!res.ok) {
+                progressManager.error();
+                throw new Error(`${HUBEAUAPI} returned ${res.status}`);
+            }
+            progressManager.valid(100);
+            return res;
+        })
         .then(res => res.json())
         .then(json => {
             data = json.data
-            console.log("data");
-            console.log(data);
-            progress.setAttribute("value", 100);
-            chartContainer.classList.remove("hidden");
+            // console.log("data");
+            // console.log(data);
         })
-        .then(updateParams)
-        .then(updateChart)
         .catch(error => {
             throw (error);
         });
@@ -214,6 +280,7 @@ function updateChart() {
     chart.scales.y.max = null;
     chart.scales.y.stripLines = [];
 
+    chartContainer.classList.remove("hidden");
     chart.update();
 }
 function paramData(data, param) {

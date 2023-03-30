@@ -29,3 +29,21 @@ a.github {
   align-items: center;
   justify-content: center;
 }
+
+label {
+  position: relative;
+}
+.inputmsg {
+  position: absolute;
+  right: 0;
+}
+.inputmsg.alert {
+  color: var(--form-element-invalid-border-color);
+}
+
+progress.valid {
+  --progress-color: var(--form-element-valid-border-color);
+}
+progress.error {
+  --progress-color: var(--form-element-invalid-border-color);
+}
