@@ -39,12 +39,19 @@ var chart = new Chart(chartContainer, {
         datasets: [{
             label: '',
             data: [],
-            borderColor: '#5abcd8',
+            backgroundColor: '#9CD6E7',
+            borderColor: '#5abcd855',
             borderWidth: 2,
             cubicInterpolationMode: 'monotone',
             tension: 0.2,
             pointBorderColor: context => {
-                var value = context.dataset.data[context.dataIndex];
+                const dset = context.dataset;
+                const value = dset.data[context.dataIndex];
+                if(dset.dataPoints) {
+                    let datapoint = dset.dataPoints[context.dataIndex];
+                    if (datapoint.id == "X" && value == 1)
+                        return "red";
+                }
                 if (infos.minmax && (value < infos.min || value > infos.max))
                     return 'red';
                 return '#5abcd8';
@@ -281,6 +288,7 @@ function updateChart() {
     console.log(`Chart param ${inputs.parameter.value}`)
     let dataPoints = paramData(data, inputs.parameter.value);
     chart.data.labels = dataPoints.map(dp => dp.x);
+    chart.data.datasets[0].dataPoints = dataPoints;
     chart.data.datasets[0].data = dataPoints.map(dp => dp.y);
 
     chart.scales.y.title = infos.unit;
@@ -305,19 +313,12 @@ function paramData(data, param) {
         }
     }
     let dp = [];
-    filtered.forEach(entry => {
-        let val = entry.resultat_numerique;
-        let color;
-        if (entry.code_unite == "X") {
-            color = entry.resultat_numerique == 0 ? "#5abcd8" : "red";
-        } else {
-            color = (infos.min == null || val >= infos.min) && (infos.max == null || val <= infos.max) ? "#5abcd8" : "red";
-        }
-        dp.push({
-            x: new Date(entry.date_prelevement),
-            y: entry.resultat_numerique,
-            color: color
-        });
-    });
+    for (let entry of filtered) {
+        let x = entry.date_prelevement;
+        let y = entry.resultat_numerique;
+        if(dp.find(o => o.x == x && o.y == y)) continue;
+        dp.push({ x: x, y: y, id: entry.code_unite});
+    };
+    console.log(dp);
     return dp;
 }
