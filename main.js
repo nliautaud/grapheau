@@ -44,7 +44,9 @@ var chart = new Chart(chartContainer, {
             tension: 0.2,
             pointBorderColor: context => {
                 var value = context.dataset.data[context.dataIndex];
-                return value < infos.min || value > infos.max ? 'red' : '#5abcd8';
+                if (infos.minmax && (value < infos.min || value > infos.max))
+                    return 'red';
+                return '#5abcd8';
             }
         }]
     },
