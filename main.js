@@ -11,11 +11,12 @@ const unknowncp = document.querySelector(".unknowncp");
 
 const chartContainer = document.getElementById('chart');
 
-const codeCommune = () => communes.options[communes.selectedIndex].value;
-const codeReseau = () => reseaux.options[reseaux.selectedIndex].value;
-const parameter = () => params.options[params.selectedIndex].text;
-const commune = () => communes.options[communes.selectedIndex].text;
-const reseau = () => reseaux.options[reseaux.selectedIndex].text;
+var inputs = {
+    get cp() { return codePostal },
+    get commune() { return communes.options[communes.selectedIndex] },
+    get reseau() { return reseaux.options[reseaux.selectedIndex] },
+    get parameter() { return params.options[params.selectedIndex] },
+}
 
 var data = [];
 var infos = {};
@@ -73,7 +74,7 @@ var chart = new Chart(chartContainer, {
                 display: true,
                 text: () => {
                     if(!data.length) return;
-                    return `Mesures ${parameter()}, ${commune()}`;
+                    return `Mesures ${inputs.parameter.text}, ${inputs.commune.text}`;
                 },
             },
             subtitle: {
@@ -81,7 +82,7 @@ var chart = new Chart(chartContainer, {
                 text: () => {
                     if(!data.length) return;
                     return [
-                        `Réseau ${reseau()}`,
+                        `Réseau ${inputs.reseau.text}`,
                         infos.minmax ? `Norme : ${infos.minmax}` : ''
                     ];
                 },
@@ -200,14 +201,16 @@ function updateCommunes(json) {
     json.forEach(o => {
         let opt = document.createElement("option");
         opt.text = o.nomCommune;
-        opt.value = o.codeCommune;
+        opt.value = o.libelleAcheminement;
         communes.add(opt);
     });
     updateReseaux();
 }
 function updateReseaux() {
     reseaux.innerHTML = "";
-    fetch(`${HUBEAUAPI}/communes_udi?code_commune=${codeCommune()}`)
+    let route = `${HUBEAUAPI}/communes_udi?nom_commune=${inputs.commune.value}`;
+    console.log(`Fetching... ${route}`);
+    fetch(route)
         .then(res => {
             if(!res.ok) {
                 progressManager.error();
@@ -217,8 +220,6 @@ function updateReseaux() {
         })
         .then(res => res.json())
         .then(json => {
-            // console.log("reseaux")
-            // console.log(json.data)
             let codes = [];
             for (let entry of json.data) {
                 if (codes.includes(entry.code_reseau)) continue;
@@ -235,7 +236,9 @@ function updateReseaux() {
         });
 }
 function updateData() {
-    fetch(`${HUBEAUAPI}/resultats_dis?code_commune=${codeCommune()}&code_reseau=${codeReseau()}`)
+    let route = `${HUBEAUAPI}/resultats_dis?nom_commune=${inputs.commune.value}&code_reseau=${inputs.reseau.value}`;
+    console.log(`Fetching... ${route}`);
+    fetch(route)
         .then(res => {
             if(!res.ok) {
                 progressManager.error();
@@ -247,8 +250,6 @@ function updateData() {
         .then(res => res.json())
         .then(json => {
             data = json.data
-            // console.log("data");
-            // console.log(data);
         })
         .then(updateParams)
         .catch(error => {
@@ -256,19 +257,20 @@ function updateData() {
         });
 }
 function updateParams() {
+    // sort alphabetically by libelle
+    let entries = data.sort((a, b) => a.libelle_parametre.toLowerCase().localeCompare(b.libelle_parametre.toLowerCase()))
+    // add every option once
     params.innerHTML = "";
     let used = [];
-    let sorted = data.sort((a, b) => a.libelle_parametre.toLowerCase().localeCompare(b.libelle_parametre.toLowerCase()))
-
-    for (let entry of sorted) {
+    for (let entry of entries) {
         if (used.includes(entry.libelle_parametre)) continue;
-        if (data.filter(d => d.libelle_parametre == entry.libelle_parametre).length < 10) continue;
         let opt = document.createElement("option");
         opt.text = entry.libelle_parametre;
         opt.value = entry.code_parametre;
         params.add(opt);
         used.push(entry.libelle_parametre);
     }
+    // select previously selected option if possible, or "ph"
     if(infos.lastParam && params.querySelector(`option[value="${infos.lastParam}"]`))
         params.value = infos.lastParam;
     else params.value = 1302;
@@ -276,7 +278,8 @@ function updateParams() {
 }
 function updateChart() {
     if (!params.value) return;
-    let dataPoints = paramData(data, parameter());
+    console.log(`Chart param ${inputs.parameter.value}`)
+    let dataPoints = paramData(data, inputs.parameter.value);
     chart.data.labels = dataPoints.map(dp => dp.x);
     chart.data.datasets[0].data = dataPoints.map(dp => dp.y);
 
@@ -288,7 +291,7 @@ function updateChart() {
     chart.update();
 }
 function paramData(data, param) {
-    let filtered = data.filter(x => x.libelle_parametre == param);
+    let filtered = data.filter(x => x.code_parametre == param);
     infos.datamax = Math.max(...filtered.map(i => i.resultat_numerique));
     infos.unit = filtered[0].libelle_unite;
     infos.minmax = filtered[0].reference_qualite_parametre;
