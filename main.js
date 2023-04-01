@@ -29,6 +29,7 @@ params.addEventListener("change", () => {
     updateChart();
 });
 
+luxon.Settings.defaultLocale = "fr";
 Chart.defaults.font.size = 14;
 Chart.defaults.font.lineHeight = 1;
 Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI","Roboto","Ubuntu","Cantarell","Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"';
@@ -63,10 +64,7 @@ var chart = new Chart(chartContainer, {
         locale: 'fr-FR',
         scales: {
             x: {
-                type: 'time',
-                time: {
-                    tooltipFormat:"'le' dd/MM/yyyy 'à' HH:mm",
-                }
+                type: 'time'
             },
             y: {
                 beginAtreset: true,
