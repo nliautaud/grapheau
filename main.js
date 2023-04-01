@@ -117,6 +117,21 @@ var chart = new Chart(chartContainer, {
                         borderWidth: 0,
                     }
                 }
+            },
+            zoom: {
+                pan: {
+                  enabled: true,
+                  mode: 'xy',
+                },
+                zoom: {
+                  wheel: {
+                    enabled: true,
+                  },
+                  pinch: {
+                    enabled: true,
+                  },
+                  mode: 'x',
+                }
             }
         }
     }
@@ -295,6 +310,7 @@ function updateChart() {
 
     chartContainer.classList.remove("hidden");
     chart.update();
+    chart.resetZoom();
 }
 function paramData(data, param) {
     let filtered = data.filter(x => x.code_parametre == param);
